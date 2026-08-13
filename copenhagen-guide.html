@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Copenhagen with Kids — A Real-City Guide</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+  :root {
+    --ink: #2b2622;
+    --paper: #faf6ef;
+    --paper-alt: #f1ebe0;
+    --line: #ddd3c2;
+    --red: #c0453a;
+    --indreby: #e3b23c;
+    --vesterbro: #e17b5f;
+    --frederiksberg: #7fa876;
+    --norrebro: #b6488f;
+    --osterbro: #5b9bd5;
+    --christianshavn: #3f9c8c;
+    --islandsbrygge: #3468a0;
+    --refshaleoen: #c0682f;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    font-family: "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+    background: var(--paper);
+    color: var(--ink);
+    line-height: 1.5;
+  }
+
+  .wrap { max-width: 1000px; margin: 0 auto; padding: 0 24px 80px; }
+
+  header.hero {
+    background: linear-gradient(160deg, var(--red) 0%, #8f2e26 100%);
+    color: #fdf3ec;
+    padding: 48px 24px 40px;
+    text-align: center;
+  }
+  header.hero h1 { font-size: 2.4rem; margin: 0 0 6px; letter-spacing: 0.5px; }
+  header.hero .sub { font-size: 1.05rem; opacity: 0.92; font-style: italic; margin-bottom: 14px; }
+  header.hero .kids {
+    display: inline-block;
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.4);
+    border-radius: 999px;
+    padding: 5px 16px;
+    font-size: 0.85rem;
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+
+  nav.toc {
+    position: sticky; top: 0; z-index: 500;
+    background: var(--paper);
+    border-bottom: 1px solid var(--line);
+    overflow-x: auto; white-space: nowrap;
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: 0.8rem;
+  }
+  nav.toc .toc-inner { max-width: 1000px; margin: 0 auto; padding: 10px 24px; }
+  nav.toc a { color: var(--ink); text-decoration: none; margin-right: 18px; padding-bottom: 3px; border-bottom: 2px solid transparent; }
+  nav.toc a:hover { border-bottom-color: var(--red); }
+
+  section { padding: 46px 0 8px; border-bottom: 1px solid var(--line); }
+  section:last-of-type { border-bottom: none; }
+
+  h2.section-title {
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    text-transform: uppercase; letter-spacing: 2px; font-size: 0.85rem;
+    color: var(--red); margin: 0 0 4px;
+  }
+  h2.section-title + .section-sub {
+    font-size: 1.5rem; margin: 0 0 18px;
+    font-family: "Iowan Old Style", Georgia, serif; color: var(--ink);
+  }
+  p.lede { max-width: 700px; color: #55504a; }
+
+  /* ---------- Map ---------- */
+  #leaflet-map { height: 560px; width: 100%; border-radius: 8px; border: 1px solid var(--line); margin-top: 10px; }
+  .map-note { font-size: 0.82rem; color: #8a8378; font-style: italic; margin-top: 8px; }
+  .legend { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px,1fr)); gap: 10px 20px; margin-top: 20px; }
+  .legend .item { display: flex; gap: 10px; align-items: flex-start; }
+  .legend .swatch { width: 14px; height: 14px; border-radius: 50%; margin-top: 4px; flex-shrink: 0; }
+  .legend .name { font-weight: 700; }
+  .legend .desc { font-size: 0.9rem; color: #5a554d; }
+  .star-note { margin-top: 4px; grid-column: 1 / -1; font-size: 0.88rem; font-style: italic; color: var(--red); }
+
+  /* ---------- Getting around ---------- */
+  .getting-around { background: var(--paper-alt); }
+  .transit-flex { display: flex; gap: 32px; flex-wrap: wrap; margin-top: 18px; }
+  .transit-col { flex: 1 1 260px; min-width: 240px; }
+  .transit-col h3 { font-size: 1.05rem; margin: 0 0 8px; font-family: "Helvetica Neue", Arial, sans-serif; }
+  .transit-col p, .transit-col li { font-size: 0.94rem; color: #4a453e; }
+  .transit-col ul { padding-left: 18px; margin: 6px 0; }
+  .tip { background: #fff8ec; border: 1px solid #e8d9b8; border-radius: 8px; padding: 10px 14px; font-size: 0.88rem; margin-top: 10px; }
+  .transit-maps { display: flex; gap: 20px; flex-wrap: wrap; margin-top: 24px; }
+  .transit-maps figure { flex: 1 1 320px; min-width: 280px; margin: 0; background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 10px; }
+  .transit-maps img { width: 100%; height: auto; display: block; border-radius: 4px; }
+  .transit-maps figcaption { font-size: 0.78rem; color: #8a8378; margin-top: 6px; }
+  .transit-maps figcaption a { color: #8a8378; }
+
+  /* ---------- Cards ---------- */
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 18px; margin: 20px 0 10px; }
+  .card { background: #fff; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; display: flex; flex-direction: column; }
+  .card-topbar { height: 4px; background: var(--tag, var(--red)); }
+  .card-img { position: relative; height: 165px; background: #eee; }
+  .card-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .card-img .credit {
+    position: absolute; bottom: 0; right: 0; left: 0;
+    background: linear-gradient(transparent, rgba(0,0,0,0.55));
+    color: #fff; font-size: 0.62rem; padding: 10px 8px 4px; text-align: right;
+    font-family: "Helvetica Neue", Arial, sans-serif;
+  }
+  .card-body { padding: 14px 18px 16px; flex: 1; display: flex; flex-direction: column; }
+  .card h3 { margin: 0 0 4px; font-size: 1.05rem; font-family: "Helvetica Neue", Arial, sans-serif; }
+  .card .tag {
+    display: inline-block; font-family: "Helvetica Neue", Arial, sans-serif; font-size: 0.68rem;
+    text-transform: uppercase; letter-spacing: 0.5px; color: var(--tag, var(--red)); font-weight: 700; margin-bottom: 6px;
+  }
+  .card p { margin: 0; font-size: 0.93rem; color: #423e38; }
+  .card .note { display: block; margin-top: 8px; font-size: 0.81rem; color: #8a8378; font-style: italic; }
+
+  .merged-note {
+    background: #eef1e6; border: 1px dashed #a9b596; border-radius: 8px;
+    padding: 10px 14px; font-size: 0.85rem; margin-bottom: 16px; display: inline-block;
+  }
+
+  #credits { font-size: 0.78rem; color: #8a8378; }
+  #credits summary { cursor: pointer; font-family: "Helvetica Neue", Arial, sans-serif; font-size: 0.85rem; color: var(--red); margin-bottom: 8px; }
+  #credits ul { padding-left: 18px; columns: 2; column-gap: 24px; }
+  #credits li { margin-bottom: 4px; break-inside: avoid; }
+  #credits a { color: #8a8378; }
+
+  footer { text-align: center; padding: 30px 24px 10px; font-size: 0.8rem; color: #9a948a; font-family: "Helvetica Neue", Arial, sans-serif; }
+
+  .leaflet-popup-content { font-family: "Helvetica Neue", Arial, sans-serif; font-size: 0.85rem; }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <h1>Copenhagen, the Local Way</h1>
+  <div class="sub">A guide for living in the city, not just seeing it</div>
+  <span class="kids">for kids age 2 · 5 · 8</span>
+</header>
+
+<nav class="toc">
+  <div class="toc-inner">
+    <a href="#map">Map</a>
+    <a href="#around">Getting Around</a>
+    <a href="#kidspots">Kid Spots</a>
+    <a href="#onlyhere">Only Here</a>
+    <a href="#daytrips">Day Trips</a>
+    <a href="#food">Food</a>
+    <a href="#credits">Credits</a>
+  </div>
+</nav>
+
+<div class="wrap">
+
+  <!-- ================= SECTION A: MAP ================= -->
+  <section id="map">
+    <h2 class="section-title">Lay of the Land</h2>
+    <div class="section-sub">The Neighborhoods</div>
+    <p class="lede">A real, zoomable street map of the center — colored circles mark each neighborhood, dots mark the specific places from this guide, and the ★ marks home base. Click any marker for its name.</p>
+
+    <div id="leaflet-map"></div>
+    <div class="map-note">Den Blå Planet (Kastrup) and Experimentarium (Hellerup) are a bit further out and left off this map to keep it readable — see their cards below for directions.</div>
+
+    <div class="legend">
+      <div class="item"><span class="swatch" style="background:var(--indreby)"></span><div><div class="name">Indre By</div><div class="desc">Medieval core — canals, cobblestones, and the Round Tower's spiral ramp.</div></div></div>
+      <div class="item"><span class="swatch" style="background:var(--vesterbro)"></span><div><div class="name">Vesterbro</div><div class="desc">Old meatpacking district turned food-and-design neighborhood. Tivoli, and home base.</div></div></div>
+      <div class="item"><span class="swatch" style="background:var(--frederiksberg)"></span><div><div class="name">Frederiksberg</div><div class="desc">Leafy and residential, with the zoo and wide green parks.</div></div></div>
+      <div class="item"><span class="swatch" style="background:var(--norrebro)"></span><div><div class="name">Nørrebro</div><div class="desc">Copenhagen's most multicultural, colorful neighborhood — wild parks and flea-market energy.</div></div></div>
+      <div class="item"><span class="swatch" style="background:var(--osterbro)"></span><div><div class="name">Østerbro</div><div class="desc">Quiet, family-heavy streets around Fælledparken.</div></div></div>
+      <div class="item"><span class="swatch" style="background:var(--christianshavn)"></span><div><div class="name">Christianshavn</div><div class="desc">Houseboats, narrow canals, and Freetown Christiania.</div></div></div>
+      <div class="item"><span class="swatch" style="background:var(--islandsbrygge)"></span><div><div class="name">Islands Brygge</div><div class="desc">Harborfront park and the floating harbor bath.</div></div></div>
+      <div class="item"><span class="swatch" style="background:var(--refshaleoen)"></span><div><div class="name">Refshaleøen</div><div class="desc">Former shipyard reborn — Reffen's food stalls, CopenHill's rooftop slope.</div></div></div>
+      <div class="star-note">★ marks Vesterbrogade 29F, st — where we're staying</div>
+    </div>
+  </section>
+
+  <!-- ================= SECTION C: GETTING AROUND ================= -->
+  <section id="around" class="getting-around">
+    <h2 class="section-title">Logistics, Not Sights</h2>
+    <div class="section-sub">Getting Around</div>
+    <p class="lede">The plan: rental bikes and public transit only, cabs/Uber as a last resort. Copenhagen is genuinely built for this — with three kids in tow, it's still the easiest option, not the hard one.</p>
+
+    <div class="transit-flex">
+      <div class="transit-col">
+        <h3>🚲 Bikes</h3>
+        <p>Copenhagen has more bikes than people and a fully separated, protected bike-lane network — safer for family riding than almost anywhere else in the world.</p>
+        <ul>
+          <li><strong>Donkey Republic</strong> — app-unlocked rental bikes parked all over the city center; good for one adult, not built for carrying a toddler.</li>
+          <li><strong>Family cargo bike rental</strong> — a box/cargo bike (the "Christiania bike") from a family bike-rental shop is how Danish parents actually move kids around. Worth renting for a day or two just for the 2-year-old — and for the experience itself.</li>
+        </ul>
+      </div>
+      <div class="transit-col">
+        <h3>🚇 Metro &amp; Trains</h3>
+        <p>The Metro (M1–M4) is driverless, frequent, and fully step-free with elevators at every station — genuinely stroller-friendly. S-trains and regional trains cover everything further out, including all day-trip towns.</p>
+        <ul>
+          <li><strong>Tickets:</strong> the DOT Mobilbilletter app, or tap a contactless card directly at the gate/on board — no paper tickets needed.</li>
+          <li><strong>Kids:</strong> young children generally ride free with a paying adult (worth confirming current rules/age cutoff on arrival).</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="tip">Rule of thumb: bike for anything in the city center under ~20 minutes, train for anything outside it. Save the cab for a meltdown, not a commute.</div>
+
+    <div class="transit-maps">
+      <figure>
+        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e7/Copenhagen_Metro_2024.svg/1280px-Copenhagen_Metro_2024.svg.png" alt="Copenhagen Metro map showing all M1–M4 stations">
+        <figcaption>Copenhagen Metro, all M1–M4 stations — <a href="https://commons.wikimedia.org/wiki/File:Copenhagen_Metro_2024.svg" target="_blank" rel="noopener">Wikimedia Commons</a></figcaption>
+      </figure>
+      <figure>
+        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/6b/S-train_diagram.svg/1280px-S-train_diagram.svg.png" alt="Copenhagen S-train diagram showing all lines and stations">
+        <figcaption>Copenhagen S-train network, all lines/stations (incl. Roskilde, Hillerød, Helsingør branches) — <a href="https://commons.wikimedia.org/wiki/File:S-train_diagram.svg" target="_blank" rel="noopener">Wikimedia Commons</a></figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ================= KID-TARGETED CITY SPOTS ================= -->
+  <section id="kidspots">
+    <h2 class="section-title">Built For Them</h2>
+    <div class="section-sub">Kid-Targeted City Spots</div>
+    <p class="lede">The places that exist specifically to entertain a 2-, 5-, and 8-year-old, all at once.</p>
+    <div class="cards">
+
+      <div class="card" style="--tag:var(--vesterbro)">
+        <div class="card-topbar"></div>
+        <div class="card-img"><img src="https://upload.wikimedia.org/wikipedia/commons/f/ff/Cph_Rollercoaster_1024.jpg" alt="Roller coaster at Tivoli Gardens"><span class="credit">Photo: Mare44 / Wikimedia Commons</span></div>
+        <div class="card-body">
+          <span class="tag">Vesterbro</span>
+          <h3>Tivoli Gardens</h3>
+          <p>The original amusement park (1843) — the one Walt Disney visited and later admitted inspired Disneyland. Old wooden roller coasters, a pantomime theater, and gardens that turn magical after dark.</p>
+          <span class="note">Rides skew 5+, but the gardens and lights work for everyone.</span>
+        </div>
+      </div>
+
+      <div class="card" style="--tag:var(--frederiksberg)">
+        <div class="card-topbar"></div>
+        <div class="card-img"><img src="https://upload.wikimedia.org/wikipedia/commons/2/2b/Elephant-and-baby-elephant-in-zoo-Copenhagen.jpg" alt="Elephant and baby elephant at Copenhagen Zoo"><span class="credit">Photo: Clipartqueen / Wikimedia Commons</span></div>
+        <div class="card-body">
+          <span class="tag">Frederiksberg</span>
+          <h3>Copenhagen Zoo</h3>
+          <p>One of Europe's oldest zoos — elephants, pandas, and a jungle house you walk straight through the middle of. A full, easy day that works from stroller-age to third-grade.</p>
+        </div>
+      </div>
+
+      <div class="card" style="--tag:var(--osterbro)">
+        <div class="card-topbar"></div>
+        <div class="card-img"><img src="https://denblaaplanet.dk/wp-content/uploads/2025/05/1.png" alt="Shark tunnel at Den Blå Planet aquarium"><span class="credit">Photo: Den Blå Planet</span></div>
+        <div class="card-body">
+          <span class="tag">Kastrup — 20 min by metro</span>
+          <h3>Aquarium — Den Blå Planet</h3>
+          <p>Northern Europe's largest aquarium, built in the shape of a swirling water droplet, with a shark tank and touch pools. This is the one the 2-year-old won't want to leave.</p>
+        </div>
+      </div>
+
+      <div class="card" style="--tag:var(--indreby)">
+        <div class="card-topbar"></div>
+        <div class="card-img"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/8f/Verdens_l%C3%A6ngste_vikingeskib_g%C3%B8res_klar_af_konservatorer_%288407954126%29.jpg/1280px-Verdens_l%C3%A6ngste_vikingeskib_g%C3%B8res_klar_af_konservatorer_%288407954126%29.jpg" alt="Viking ship at the National Museum of Denmark"><span class="credit">Photo: Nationalmuseet / Wikimedia Commons</span></div>
+        <div class="card-body">
+          <span class="tag">Indre By</span>
+          <h3>Children's Museum (Nationalmuseet)</h3>
+          <p>Dress up as a Viking, climb aboard a real ship, try on medieval armor — a museum built entirely around touching things, not just looking at them.</p>
+          <span class="note">Heads up: closed for a renovation Aug 21, 2026 – Feb 11, 2027 — worth checking it's reopened before planning around it.</span>
+        </div>
+      </div>
+
+      <div class="card" style="--tag:var(--indreby)">
+        <div class="card-topbar"></div>
+        <div class="card-img"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/a7/Lego_Store_Copenhagen_01.jpg/1280px-Lego_Store_Copenhagen_01.jpg" alt="LEGO Store Copenhagen storefront"><span class="credit">Photo: Leif Jørgensen / Wikimedia Commons</span></div>
+        <div class="card-body">
+          <span class="tag">Indre By</span>
+          <h3>LEGO Store, Vimmelskaftet</h3>
+          <p>The flagship store for a Danish invention — a giant build wall, a wall of minifigures, and a massive brick dragon overhead. A required pilgrimage.</p>
+        </div>
+      </div>
+
+      <div class="card" style="--tag:var(--vesterbro)">
+        <div class="card-topbar"></div>
+        <div class="card-img"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/99/20171005_Experimentarium_Hellerup_0062_%2837729624156%29.jpg/1280px-20171005_Experimentarium_Hellerup_0062_%2837729624156%29.jpg" alt="Experimentarium science museum exhibit"><span class="credit">Photo: Johan Wessman/News Øresund / Wikimedia Commons</span></div>
+        <div class="card-body">
+          <span class="tag">Hellerup — 15 min by train</span>
+          <h3>Experimentarium</h3>
+          <p>A science museum where every exhibit wants to be touched, cranked, or climbed on — bubbles, tornadoes, a bike-powered generator. Science as a full-body activity.</p>
+        </div>
+      </div>
+
+      <div class="card" style="--tag:var(--osterbro)">
+        <div class="card-topbar"></div>
+        <div class="card-img"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/cd/Trafiklegepladsen_F%C3%A6lledparken_04.jpg/1280px-Trafiklegepladsen_F%C3%A6lledparken_04.jpg" alt="Playground in Fælledparken"><span class="credit">Photo: Leif Jørgensen / Wikimedia Commons</span></div>
+        <div class="card-body">
+          <span class="tag">Østerbro</span>
+          <h3>Fælledparken</h3>
+          <p>Four completely different playgrounds within a few minutes of each other, so nobody has to agree on just one — including a bike-themed traffic playground with free loaner bikes. Copenhagen's biggest park, built for exactly this.</p>
+        </div>
+      </div>
+
+      <div class="card" style="--tag:var(--norrebro)">
+        <div class="card-topbar"></div>
+        <div class="card-img"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/a7/2_Superkilen_Park.jpg/1280px-2_Superkilen_Park.jpg" alt="Superkilen park in Nørrebro"><span class="credit">Photo: Lorie Shaull / Wikimedia Commons</span></div>
+        <div class="card-body">
+          <span class="tag">Nørrebro</span>
+          <h3>Superkilen</h3>
+          <p>A three-block park built entirely from playground equipment, benches, and street furniture donated by immigrant residents from over 50 countries — neon signage, a boxing ring, climbing gear from Africa and Asia. Copenhagen's strangest, most photogenic playground, and it's free.</p>
+        </div>
+      </div>
+
+      <div class="card" style="--tag:var(--indreby)">
+        <div class="card-topbar"></div>
+        <div class="card-img"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/59/Peter_Hansen%2C_Legende_b%C3%B8rn_Enghave_Plads%2C_%2C_KMS2075%2C_Statens_Museum_for_Kunst.jpg/1280px-Peter_Hansen%2C_Legende_b%C3%B8rn_Enghave_Plads%2C_%2C_KMS2075%2C_Statens_Museum_for_Kunst.jpg" alt="Painting of playing children, part of SMK's own collection"><span class="credit">Peter Hansen, "Playing Children, Enghave Square" / SMK</span></div>
+        <div class="card-body">
+          <span class="tag">Indre By</span>
+          <h3>SMK Children's Workshop</h3>
+          <p>Denmark's National Gallery runs a weekend art workshop where kids build, paint, and create inspired by the actual paintings on the walls — a rainy-day art fix that doesn't feel like a museum march.</p>
+        </div>
+      </div>
+
+      <div class="card" style="--tag:var(--vesterbro)">
+        <div class="card-topbar"></div>
+        <div class="card-img"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/92/Kopenhagen_%28DK%29%2C_Tycho-Brahe-Planetarium_--_2017_--_1457.jpg/1280px-Kopenhagen_%28DK%29%2C_Tycho-Brahe-Planetarium_--_2017_--_1457.jpg" alt="Tycho Brahe Planetarium building"><span class="credit">Photo: Dietmar Rabich / Wikimedia Commons</span></div>
+        <div class="card-body">
+          <span class="tag">Vesterbro</span>
+          <h3>Tycho Brahe Planetarium</h3>
+          <p>An IMAX-style dome screen right by the lakes — space and nature films that tilt seats back under a sky that wraps all the way around.</p>
+          <span class="note">Best for the 5 &amp; 8yo — the dark, loud dome may not suit the 2yo.</span>
+        </div>
+      </div>
+
+      <div class="card" style="--tag:var(--indreby)">
+        <div class="card-topbar"></div>
+        <div class="card-img"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/a7/BLOX.jpg/1280px-BLOX.jpg" alt="BLOX building, home of the Danish Architecture Center"><span class="credit">Photo: Leif Jørgensen / Wikimedia Commons</span></div>
+        <div class="card-body">
+          <span class="tag">Harbourfront</span>
+          <h3>Danish Architecture Center (DAC / BLOX)</h3>
+          <p>A 40-metre slide through the middle of the building, a hands-on family workshop, and a hill-shaped outdoor playground with trampolines and a climbing tunnel — the best rainy-day option in the city, and it's free for kids.</p>
+        </div>
+      </div>
+
+      <div class="card" style="--tag:var(--indreby)">
+        <div class="card-topbar"></div>
+        <div class="card-img"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/86/2023-04-19_Palm_House_Copenhagen_01.jpg/1280px-2023-04-19_Palm_House_Copenhagen_01.jpg" alt="The Palm House glasshouse at Copenhagen's Botanical Garden"><span class="credit">Photo: Bärbel Miemietz / Wikimedia Commons</span></div>
+        <div class="card-body">
+          <span class="tag">Indre By</span>
+          <h3>Palm House, Botanical Garden</h3>
+          <p>A Victorian cast-iron-and-glass greenhouse from 1874 you can climb up and around — tropical jungle, giant bamboo, and a butterfly house, all a five-minute walk from Nørreport. A warm, green surprise in the middle of the city.</p>
+        </div>
+      </div>
+
+      <div class="card" style="--tag:var(--indreby)">
+        <div class="card-topbar"></div>
+        <div class="card-img"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/29/Designmuseum_Danmark_-_main_entrance.jpg/1280px-Designmuseum_Danmark_-_main_entrance.jpg" alt="Designmuseum Danmark entrance and garden"><span class="credit">Photo: Heidi De Vries / Wikimedia Commons</span></div>
+        <div class="card-body">
+          <span class="tag">Indre By</span>
+          <h3>Design Museum Denmark</h3>
+          <p>Free for under-17s, with a garden full of climbable wooden "Playmates" sculptures and weekend family workshops (dyeing, sewing, sketchbooks) inspired by the exhibits — Danish design made hands-on instead of look-but-don't-touch.</p>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ================= ONLY IN COPENHAGEN ================= -->
+  <section id="onlyhere">
+    <h2 class="section-title">Couldn't Do This Anywhere Else</h2>
+    <div class="section-sub">Only-in-Copenhagen Sights (Kid-Doable)</div>
+    <p class="lede">The things that make this city specifically this city — and that a family can actually pull off.</p>
+    <div class="cards">
+
+      <div class="card" style="--tag:var(--islandsbrygge)">
+        <div class="card-topbar"></div>
+        <div class="card-img"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/47/Havnebadet1.jpg/1280px-Havnebadet1.jpg" alt="Islands Brygge Harbour Bath"><span class="credit">Photo: Daniel R. Witte / Wikimedia Commons</span></div>
+        <div class="card-body">
+          <span class="tag">Islands Brygge</span>
+          <h3>Harbour Bath</h3>
+          <p>Swim in the middle of the harbor, steps from downtown — a floating pool complex with a shallow kids' basin, built because the water finally got clean enough to jump into.</p>
+        </div>
+      </div>
+
+      <div class="card" style="--tag:var(--refshaleoen)">
+        <div class="card-topbar"></div>
+        <div class="card-img"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/6e/Copenhill_2.jpg/1280px-Copenhill_2.jpg" alt="CopenHill waste-to-energy plant with rooftop slope"><span class="credit">Photo: Kallerna / Wikimedia Commons</span></div>
+        <div class="card-body">
+          <span class="tag">Refshaleøen</span>
+          <h3>CopenHill</h3>
+          <p>A working waste-to-energy plant with a rooftop dry-ski and hiking slope, a climbing wall bolted to the building's side, and Denmark's tallest artificial climbing structure. Nowhere else pairs an incinerator with a ski hill.</p>
+        </div>
+      </div>
+
+      <div class="card" style="--tag:var(--indreby)">
+        <div class="card-topbar"></div>
+        <div class="card-img"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/10/Kopenhagen_%28DK%29%2C_Runder_Turm_--_2017_--_1438.jpg/1280px-Kopenhagen_%28DK%29%2C_Runder_Turm_--_2017_--_1438.jpg" alt="Round Tower (Rundetaarn) in Copenhagen"><span class="credit">Photo: Dietmar Rabich / Wikimedia Commons</span></div>
+        <div class="card-body">
+          <span class="tag">Indre By</span>
+          <h3>Round Tower</h3>
+          <p>Europe's oldest functioning observatory, reached by a spiral ramp — not stairs — that horses and carriages once climbed. Genuinely fun, stroller-friendly, and it ends on a rooftop view.</p>
+        </div>
+      </div>
+
+      <div class="card" style="--tag:var(--christianshavn)">
+        <div class="card-topbar"></div>
+        <div class="card-img"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/8a/Christiania_exit.jpg/1280px-Christiania_exit.jpg" alt="Entrance to Freetown Christiania"><span class="credit">Photo: Neptuul / Wikimedia Commons</span></div>
+        <div class="card-body">
+          <span class="tag">Christianshavn</span>
+          <h3>Freetown Christiania</h3>
+          <p>A self-governing, car-free neighborhood since 1971 — hand-built houses, murals, and its own unwritten rules. There's nothing else like it in most cities, period.</p>
+        </div>
+      </div>
+
+      <div class="card" style="--tag:var(--christianshavn)">
+        <div class="card-topbar"></div>
+        <div class="card-img"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/27/Canal_Tours_on_Slotsholmskanalen_02.jpg/1280px-Canal_Tours_on_Slotsholmskanalen_02.jpg" alt="Boats on a Copenhagen canal"><span class="credit">Photo: Leif Jørgensen / Wikimedia Commons</span></div>
+        <div class="card-body">
+          <span class="tag">Canals</span>
+          <h3>GoBoat</h3>
+          <p>Rent a solar-powered boat, no license required, and let the kids take the wheel through the canals. DIY sightseeing where driving the boat is the actual attraction.</p>
+        </div>
+      </div>
+
+      <div class="card" style="--tag:var(--norrebro)">
+        <div class="card-topbar"></div>
+        <div class="card-img"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/78/Antique_Market_Copenhagen_20130831_011_%289637230101%29.jpg/1280px-Antique_Market_Copenhagen_20130831_011_%289637230101%29.jpg" alt="Antique flea market stall in Copenhagen"><span class="credit">Photo: Johan Wessman/News Øresund / Wikimedia Commons</span></div>
+        <div class="card-body">
+          <span class="tag">Nørrebro</span>
+          <h3>Sunday Flea Markets</h3>
+          <p>Locals selling vintage design, old toys, and neighborhood junk along Nørrebro's streets — actual Copenhagen life, no tourist stall in sight.</p>
+        </div>
+      </div>
+
+      <div class="card" style="--tag:var(--christianshavn)">
+        <div class="card-topbar"></div>
+        <div class="card-img"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/62/Kopenhagen_%28DK%29%2C_Christianshaven_--_2017_--_1525.jpg/1280px-Kopenhagen_%28DK%29%2C_Christianshaven_--_2017_--_1525.jpg" alt="Christianshavn canal and houseboats near La Banchina"><span class="credit">Photo: Dietmar Rabich / Wikimedia Commons</span></div>
+        <div class="card-body">
+          <span class="tag">East of Christianshavn</span>
+          <h3>La Banchina</h3>
+          <p>A tiny floating sauna and harbor swim spot — the quieter, more local cousin of the Islands Brygge Harbour Bath.</p>
+        </div>
+      </div>
+
+      <div class="card" style="--tag:var(--indreby)">
+        <div class="card-topbar"></div>
+        <div class="card-img"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/44/Kaare_Klint_table_chairs_design_museum.jpg/1280px-Kaare_Klint_table_chairs_design_museum.jpg" alt="Iconic mid-century Danish furniture, illustrative of Dansk Møbelkunst's collection"><span class="credit">Photo illustrative of the style / Wikimedia Commons</span></div>
+        <div class="card-body">
+          <span class="tag">Indre By — for the grown-ups</span>
+          <h3>Dansk Møbelkunst Gallery</h3>
+          <p>A small, museum-quality gallery of original Wegner, Jacobsen, and Kjærholm furniture from Denmark's mid-century golden age — more a quiet browse than a kid activity, best done solo or during a nap window.</p>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ================= DAY TRIPS ================= -->
+  <section id="daytrips">
+    <h2 class="section-title">Under an Hour Away</h2>
+    <div class="section-sub">Day Trips</div>
+    <p class="lede">All five are doable by train. Pick 1–3 depending on energy levels that day.</p>
+    <div class="cards">
+
+      <div class="card">
+        <div class="card-topbar"></div>
+        <div class="card-img"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/1f/Kronborg_April_2026_05.jpg/1280px-Kronborg_April_2026_05.jpg" alt="Kronborg Castle in Helsingør"><span class="credit">Photo: ArildV / Wikimedia Commons</span></div>
+        <div class="card-body">
+          <span class="tag">Helsingør</span>
+          <h3>Kronborg Castle</h3>
+          <p>The real-life setting Shakespeare used for Hamlet's castle — a moated Renaissance fortress with cannons and underground casemates, looking straight across the water to Sweden.</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-topbar"></div>
+        <div class="card-img"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/3/34/Copenhagen_1095.JPG/1280px-Copenhagen_1095.JPG" alt="The Baroque garden and cascade at Frederiksborg Castle"><span class="credit">Photo: Wikimedia Commons</span></div>
+        <div class="card-body">
+          <span class="tag">Hillerød</span>
+          <h3>Frederiksborg Castle + Baroque Garden</h3>
+          <p>Denmark's answer to Versailles — a lake-ringed Renaissance palace with rooms of armor and royal portraits to run between, plus the terraced Baroque garden (Slotshave) behind it: clipped hedges, a cascading water feature, and royal monograms trimmed into boxwood.</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-topbar"></div>
+        <div class="card-img"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/07/Viking_Ship_Museum%2C_Roskilde_02.jpg/1280px-Viking_Ship_Museum%2C_Roskilde_02.jpg" alt="Full-size Viking ships inside the Viking Ship Museum hall in Roskilde"><span class="credit">Photo: Superchilum / Wikimedia Commons</span></div>
+        <div class="card-body">
+          <span class="tag">Roskilde</span>
+          <h3>Viking Ship Museum + Royal Tombs</h3>
+          <p>A hall of real, excavated Viking ships pulled from the fjord, plus the cathedral where Danish kings and queens are actually buried. Viking history that isn't a replica.</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-topbar"></div>
+        <div class="card-img"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e8/Rutschebanen_p%C3%A5_Bakken.jpg/1280px-Rutschebanen_p%C3%A5_Bakken.jpg" alt="Rutschebanen, the historic wooden roller coaster at Bakken"><span class="credit">Photo: Bakken/PR / Wikimedia Commons</span></div>
+        <div class="card-body">
+          <span class="tag">Klampenborg</span>
+          <h3>Dyrehaven + Bakken</h3>
+          <p>Wild deer roam free through a royal hunting forest — they'll let you get surprisingly close — right next to Bakken, the oldest amusement park in the world. One stop, two completely different moods.</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-topbar"></div>
+        <div class="card-img"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/fd/2004_in_Frilandsmuseet_%28d%29.jpg/1280px-2004_in_Frilandsmuseet_%28d%29.jpg" alt="Historic farmhouse at Frilandsmuseet open air museum"><span class="credit">Photo: Thomas Dahlstrøm Nielsen / Wikimedia Commons</span></div>
+        <div class="card-body">
+          <span class="tag">Kongens Lyngby</span>
+          <h3>Frilandsmuseet (Open Air Museum)</h3>
+          <p>Over 100 real historic buildings — farmhouses, windmills, a whole rural Denmark — moved here brick by brick and thatch by thatch. Lots of ground to run around on, animals, and nothing behind glass.</p>
+          <span class="note">~35–45 min: S-train to Sorgenfri + 10 min walk, or direct bus 184/194 from Nørreport.</span>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ================= FOOD ================= -->
+  <section id="food">
+    <h2 class="section-title">Eat Like This Is Home</h2>
+    <div class="section-sub">Food Destinations</div>
+    <div class="cards">
+
+      <div class="card" style="--tag:var(--refshaleoen)">
+        <div class="card-topbar"></div>
+        <div class="card-img"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/13/Reffen_Copenhagen_Street_Food_Market.jpg/1280px-Reffen_Copenhagen_Street_Food_Market.jpg" alt="Reffen street food market stalls"><span class="credit">Photo: Turaids / Wikimedia Commons</span></div>
+        <div class="card-body">
+          <span class="tag">Refshaleøen</span>
+          <h3>Reffen</h3>
+          <p>A shipyard-turned street-food market right on the water, dozens of stalls, no two visits the same. Pick a different table every time.</p>
+        </div>
+      </div>
+
+      <div class="card" style="--tag:var(--indreby)">
+        <div class="card-topbar"></div>
+        <div class="card-img"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/1d/Copenhagen_Torvehallerne_%2830267894558%29.jpg/1280px-Copenhagen_Torvehallerne_%2830267894558%29.jpg" alt="Torvehallerne food hall stalls"><span class="credit">Photo: Jorge Franganillo / Wikimedia Commons</span></div>
+        <div class="card-body">
+          <span class="tag">Indre By</span>
+          <h3>Torvehallerne</h3>
+          <p>Copenhagen's best food hall — Hallernes Smørrebrød for classic open sandwiches, Slagter Lund for the butcher's pork sandwiches and meatballs, all under one glass roof.</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-topbar"></div>
+        <div class="card-img"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Bakery_products_on_the_counter_of_Jacob%27s_Bakery_%2B_Cafe_2024-04-15.jpg/1280px-Bakery_products_on_the_counter_of_Jacob%27s_Bakery_%2B_Cafe_2024-04-15.jpg" alt="Danish pastry counter"><span class="credit">Photo: Andy Li / Wikimedia Commons</span></div>
+        <div class="card-body">
+          <span class="tag">Nørrebro</span>
+          <h3>Hart Bageri</h3>
+          <p>Home of the cinnamon snail, the laminated pastry that turned into a Copenhagen cult object. Worth the line.</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-topbar"></div>
+        <div class="card-img"><img src="https://upload.wikimedia.org/wikipedia/commons/e/e6/Cardamon_danish.jpg" alt="Cardamom bun pastry"><span class="credit">Photo: Andy Li / Wikimedia Commons</span></div>
+        <div class="card-body">
+          <span class="tag">Nørrebro</span>
+          <h3>Juno the Bakery</h3>
+          <p>The cardamom bun that launched a thousand imitators across the city — this is the original.</p>
+        </div>
+      </div>
+
+      <div class="card" style="--tag:var(--indreby)">
+        <div class="card-topbar"></div>
+        <div class="card-img"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/7e/Sankt_Peders_Str%C3%A6de_18_%28Copenhagen%29.jpg/1280px-Sankt_Peders_Str%C3%A6de_18_%28Copenhagen%29.jpg" alt="Sankt Peders Stræde in Copenhagen"><span class="credit">Photo: Ramblersen / Wikimedia Commons</span></div>
+        <div class="card-body">
+          <span class="tag">Indre By</span>
+          <h3>Sankt Peders Bageri</h3>
+          <p>Copenhagen's oldest bakery, since 1652, with its own famous cinnamon snail. Go on a Wednesday, when it comes out fresh.</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-topbar"></div>
+        <div class="card-img"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/9b/10BerlinerPfannis.jpg/1280px-10BerlinerPfannis.jpg" alt="Berliner jam-filled donuts"><span class="credit">Photo: Lear 21 / Wikimedia Commons</span></div>
+        <div class="card-body">
+          <span class="tag">Nørrebro</span>
+          <h3>Lille Bakery</h3>
+          <p>Some of the city's best berliners — jam-filled Danish donuts — out of a tiny, unassuming shop.</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-topbar"></div>
+        <div class="card-img"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/2e/Ristet_rugbr%C3%B8d_med_r%C3%B8get_pebermakrel_og_r%C3%B8r%C3%A6g_%286896213175%29.jpg/1280px-Ristet_rugbr%C3%B8d_med_r%C3%B8get_pebermakrel_og_r%C3%B8r%C3%A6g_%286896213175%29.jpg" alt="Danish rye bread open sandwich"><span class="credit">Photo: cyclonebill / Wikimedia Commons</span></div>
+        <div class="card-body">
+          <span class="tag">Neighborhood cafe</span>
+          <h3>Rug Brød</h3>
+          <p>A relaxed bakery-cafe for slowing down between activities — good coffee, good pastry, no plan required.</p>
+        </div>
+      </div>
+
+      <div class="card" style="--tag:var(--osterbro)">
+        <div class="card-topbar"></div>
+        <div class="card-img"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/d5/Fridtjof_Nansens_Plads_with_snow.JPG/1280px-Fridtjof_Nansens_Plads_with_snow.JPG" alt="A quiet square in Østerbro"><span class="credit">Photo: Leif Jørgensen / Wikimedia Commons</span></div>
+        <div class="card-body">
+          <span class="tag">Østerbro</span>
+          <h3>Bopa Plads</h3>
+          <p>A tree-lined square with the low-key, stroller-and-coffee energy of a Copenhagen version of Carroll Gardens. Good for a lazy afternoon between playgrounds.</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-topbar"></div>
+        <div class="card-img"><img src="https://upload.wikimedia.org/wikipedia/commons/8/80/Copenhagen_polsevogn.jpg" alt="Danish hot dog stand (pølsevogn)"><span class="credit">Photo: WT-shared/Trsqr / Wikimedia Commons</span></div>
+        <div class="card-body">
+          <span class="tag">Anywhere</span>
+          <h3>Pølsevogn (hot dog cart)</h3>
+          <p>The Danish street hot dog stand is a genuine institution. Order "ristet med det hele" (everything on it) for a two-minute, two-dollar bite of actual Danish culture.</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-topbar"></div>
+        <div class="card-img"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/d8/Oatmeal_porridge_1-minute_with_additional_ingredients.jpg/1280px-Oatmeal_porridge_1-minute_with_additional_ingredients.jpg" alt="Bowl of porridge"><span class="credit">Photo: UserTwoSix / Wikimedia Commons</span></div>
+        <div class="card-body">
+          <span class="tag">Multiple locations</span>
+          <h3>Grød</h3>
+          <p>A porridge bar — served fast, sweet or savory. A distinctly Danish fast-food concept that's toddler-friendly and quick when everyone just needs to eat now.</p>
+        </div>
+      </div>
+
+      <div class="card" style="--tag:var(--indreby)">
+        <div class="card-topbar"></div>
+        <div class="card-img"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/0a/Vaffelbageren_Nyhavn.jpg/1280px-Vaffelbageren_Nyhavn.jpg" alt="Classic Copenhagen ice cream and waffle stand"><span class="credit">Photo: Leif Jørgensen / Wikimedia Commons</span></div>
+        <div class="card-body">
+          <span class="tag">Indre By</span>
+          <h3>Otto Bahne (or another classic ice cream counter)</h3>
+          <p>A generations-old Danish ice cream tradition — waffle cones and flødeboller. The after-swim, after-playground reward stop.</p>
+        </div>
+      </div>
+
+      <div class="card" style="--tag:var(--indreby)">
+        <div class="card-topbar"></div>
+        <div class="card-img"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/1f/Delicious_dessert_slices_with_whipped_cream_served_on_decorative_plates.jpg/1280px-Delicious_dessert_slices_with_whipped_cream_served_on_decorative_plates.jpg" alt="Layered cream cake slices"><span class="credit">Photo: Shixart1985 / Wikimedia Commons</span></div>
+        <div class="card-body">
+          <span class="tag">Indre By</span>
+          <h3>Konditori La Glace</h3>
+          <p>Copenhagen's oldest patisserie, open since 1870, famous for its towering "Sportskage" cake. More spectacle than errand — a fun, old-world Danish novelty stop.</p>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ================= CREDITS ================= -->
+  <section id="credits">
+    <h2 class="section-title">Sources</h2>
+    <div class="section-sub">Map &amp; Photo Credits</div>
+    <details>
+      <summary>All maps and photos are real, freely-licensed images — click to see sources</summary>
+      <p>Base map tiles © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors. Metro and S-train diagrams from Wikimedia Commons (<a href="https://commons.wikimedia.org/wiki/File:Copenhagen_Metro_2024.svg" target="_blank" rel="noopener">Copenhagen Metro 2024.svg</a>, <a href="https://commons.wikimedia.org/wiki/File:S-train_diagram.svg" target="_blank" rel="noopener">S-train diagram.svg</a>). All place photos are freely-licensed images from Wikimedia Commons; some (bakeries/pastries in particular) are representative stand-ins rather than the exact shop. Full attribution is in each photo's caption.</p>
+    </details>
+  </section>
+
+</div>
+
+<footer>
+  Made for one specific trip, with three specific kids in mind. Skip freely, reorder freely.
+</footer>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+  var map = L.map('leaflet-map', { scrollWheelZoom: false });
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+  }).addTo(map);
+
+  var neighborhoods = [
+    { name: "Indre By", lat: 55.6831, lon: 12.5830, color: "#e3b23c", desc: "Medieval core — canals, cobblestones, Round Tower." },
+    { name: "Vesterbro", lat: 55.6660, lon: 12.5523, color: "#e17b5f", desc: "Food-and-design district, Tivoli, and home base." },
+    { name: "Frederiksberg", lat: 55.6780, lon: 12.5326, color: "#7fa876", desc: "Leafy, residential, the zoo." },
+    { name: "Nørrebro", lat: 55.6959, lon: 12.5450, color: "#b6488f", desc: "Multicultural, colorful, Superkilen and flea markets." },
+    { name: "Østerbro", lat: 55.7051, lon: 12.5826, color: "#5b9bd5", desc: "Quiet, family-heavy streets, Fælledparken." },
+    { name: "Christianshavn", lat: 55.6724, lon: 12.5886, color: "#3f9c8c", desc: "Houseboats, canals, Freetown Christiania." },
+    { name: "Islands Brygge", lat: 55.6634, lon: 12.5852, color: "#3468a0", desc: "Harborfront park, floating harbor bath." },
+    { name: "Refshaleøen", lat: 55.6910, lon: 12.6150, color: "#c0682f", desc: "Former shipyard — Reffen, CopenHill." }
+  ];
+
+  var pois = [
+    { name: "Tivoli Gardens", lat: 55.6734, lon: 12.5692, cat: "kid" },
+    { name: "Copenhagen Zoo", lat: 55.6663, lon: 12.5245, cat: "kid" },
+    { name: "Children's Museum (Nationalmuseet)", lat: 55.6747, lon: 12.5744, cat: "kid" },
+    { name: "LEGO Store", lat: 55.6775, lon: 12.5745, cat: "kid" },
+    { name: "Fælledparken", lat: 55.7019, lon: 12.5665, cat: "kid" },
+    { name: "Superkilen", lat: 55.6997, lon: 12.5424, cat: "kid" },
+    { name: "SMK (Children's Workshop)", lat: 55.6888, lon: 12.5784, cat: "kid" },
+    { name: "Tycho Brahe Planetarium", lat: 55.6745, lon: 12.5582, cat: "kid" },
+    { name: "DAC / BLOX", lat: 55.6722, lon: 12.5785, cat: "kid" },
+    { name: "Palm House, Botanical Garden", lat: 55.6875, lon: 12.5730, cat: "kid" },
+    { name: "Design Museum Denmark", lat: 55.6864, lon: 12.5944, cat: "kid" },
+    { name: "Islands Brygge Harbour Bath", lat: 55.6685, lon: 12.5775, cat: "onlyhere" },
+    { name: "CopenHill", lat: 55.6849, lon: 12.6211, cat: "onlyhere" },
+    { name: "Round Tower", lat: 55.6814, lon: 12.5758, cat: "onlyhere" },
+    { name: "Freetown Christiania", lat: 55.6772, lon: 12.6105, cat: "onlyhere" },
+    { name: "GoBoat", lat: 55.6656, lon: 12.5836, cat: "onlyhere" },
+    { name: "Sunday Flea Market (Ravnsborggade)", lat: 55.6860, lon: 12.5560, cat: "onlyhere" },
+    { name: "La Banchina", lat: 55.6825, lon: 12.6013, cat: "onlyhere" },
+    { name: "Dansk Møbelkunst Gallery", lat: 55.6815, lon: 12.5879, cat: "onlyhere" },
+    { name: "Reffen", lat: 55.6932, lon: 12.6098, cat: "food" },
+    { name: "Torvehallerne", lat: 55.6839, lon: 12.5696, cat: "food" },
+    { name: "Bopa Plads", lat: 55.7052, lon: 12.5811, cat: "food" }
+  ];
+
+  var catColors = { kid: "#c0453a", onlyhere: "#3f9c8c", food: "#e3b23c" };
+
+  var allBounds = [];
+
+  neighborhoods.forEach(function (n) {
+    L.circle([n.lat, n.lon], {
+      radius: 550, color: n.color, weight: 2, fillColor: n.color, fillOpacity: 0.15
+    }).addTo(map).bindPopup("<strong>" + n.name + "</strong><br>" + n.desc);
+    allBounds.push([n.lat, n.lon]);
+  });
+
+  pois.forEach(function (p) {
+    L.circleMarker([p.lat, p.lon], {
+      radius: 6, color: "#2b2622", weight: 1, fillColor: catColors[p.cat], fillOpacity: 0.9
+    }).addTo(map).bindPopup("<strong>" + p.name + "</strong>");
+    allBounds.push([p.lat, p.lon]);
+  });
+
+  var homeIcon = L.divIcon({
+    className: "home-star-icon",
+    html: "<div style=\"font-size:26px;line-height:26px;color:#c0453a;text-shadow:0 0 3px #fff, 0 0 3px #fff;\">&#9733;</div>",
+    iconSize: [26, 26],
+    iconAnchor: [13, 13]
+  });
+  L.marker([55.67234, 12.55888], { icon: homeIcon })
+    .addTo(map)
+    .bindPopup("<strong>Home base</strong><br>Vesterbrogade 29F, st")
+    .openPopup();
+  allBounds.push([55.67234, 12.55888]);
+
+  map.fitBounds(allBounds, { padding: [30, 30] });
+</script>
+
+</body>
+</html>
